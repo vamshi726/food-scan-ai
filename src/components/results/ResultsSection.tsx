@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import type { NutritionAnalysis } from "@/pages/Index";
+import type { NutritionAnalysis } from "@/types/nutrition";
 import { HealthScoreCard } from "./HealthScoreCard";
 import { NutrientsCard } from "./NutrientsCard";
 import { IngredientsCard } from "./IngredientsCard";

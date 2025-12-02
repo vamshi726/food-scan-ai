@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
-import type { NutritionAnalysis } from "@/pages/Index";
+import type { NutritionAnalysis } from "@/types/nutrition";
 
 interface HealthScoreCardProps {
   analysis: NutritionAnalysis;

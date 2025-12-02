@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Barcode, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { NutritionAnalysis } from "@/pages/Index";
+import type { NutritionAnalysis } from "@/types/nutrition";
 
 interface ScannerSectionProps {
   onAnalysisComplete: (analysis: NutritionAnalysis) => void;

@@ -26,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { barcode, image } = await req.json();
+    const { barcode, image, userPreferences } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -135,7 +135,17 @@ Return ONLY a JSON object with this exact structure:
       nutritionData.ingredients?.map(i => i.text).join(", ") || 
       "No ingredients listed";
 
-    // Multi-agent AI analysis
+    // Multi-agent AI analysis with personalization
+    const userContext = userPreferences ? `
+
+User Health Profile:
+- Health Issues: ${userPreferences.health_issues?.join(", ") || "None"}
+- Sensitivities: ${userPreferences.sensitivities?.join(", ") || "None"}
+- Allergies/Intolerances: ${userPreferences.intolerances?.join(", ") || "None"}
+- Dietary Preferences: ${userPreferences.dietary_preferences?.join(", ") || "None"}
+
+IMPORTANT: Provide personalized warnings and recommendations based on the user's health profile. Flag any ingredients that conflict with their health issues, sensitivities, or allergies.` : "";
+
     const analysisPrompt = `You are a nutrition expert AI conducting a multi-agent analysis.
 
 Product: ${productName}
@@ -151,13 +161,14 @@ Nutrients (per 100g):
 - Fiber: ${nutrients.fiber}g
 
 Ingredients: ${ingredientsText}
+${userContext}
 
 Perform a comprehensive analysis following this multi-agent approach:
 
 Agent 1 - Ingredient Parser: Parse and categorize all ingredients
 Agent 2 - Risk Detector: Identify harmful additives, preservatives, excessive sugar/sodium
-Agent 3 - Health Score Calculator: Calculate a score from 1-10 based on WHO guidelines
-Agent 4 - Recommendation Engine: Suggest healthier alternatives or improvements
+Agent 3 - Health Score Calculator: Calculate a score from 1-10 based on WHO guidelines${userPreferences ? " AND user's health profile" : ""}
+Agent 4 - Recommendation Engine: Suggest healthier alternatives or improvements${userPreferences ? " tailored to user's needs" : ""}
 
 Return ONLY valid JSON with this structure:
 {
@@ -167,11 +178,11 @@ Return ONLY valid JSON with this structure:
     {
       "name": "ingredient name",
       "risk": "high" | "medium" | "low",
-      "explanation": "why it's concerning"
+      "explanation": "why it's concerning${userPreferences ? " (mention if it conflicts with user profile)" : ""}"
     }
   ],
   "recommendations": ["rec1", "rec2", "rec3"],
-  "aiExplanation": "2-3 sentence summary of overall assessment"
+  "aiExplanation": "2-3 sentence summary of overall assessment${userPreferences ? " personalized to user's health profile" : ""}"
 }
 
 Guidelines:
@@ -179,7 +190,8 @@ Guidelines:
 - Score 4-6: moderate (moderate sugar 10-20g, sodium 400-800mg)  
 - Score ≤3: unhealthy (high sugar >20g, sodium >800mg, many additives)
 - Flag: E-numbers, palm oil, high fructose corn syrup, trans fats, artificial sweeteners
-- Consider nutrient density and ingredient quality`;
+- Consider nutrient density and ingredient quality
+${userPreferences ? "- CRITICAL: Lower score if ingredients conflict with user's health issues, sensitivities, or allergies" : ""}`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
