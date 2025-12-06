@@ -1,1 +1,10 @@
 project_id = "evuzabykhxpimvulnrve"
+
+[functions.analyze-nutrition]
+verify_jwt = false
+
+[functions.nutricoach]
+verify_jwt = false
+
+[functions.contextualize-nutrition]
+verify_jwt = false

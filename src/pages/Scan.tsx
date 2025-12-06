@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, User, Sparkles } from "lucide-react";
+import { LogOut, User, Sparkles, MessageCircle } from "lucide-react";
 import { ScannerSection } from "@/components/scanner/ScannerSection";
 import { ResultsSection } from "@/components/results/ResultsSection";
 import type { NutritionAnalysis } from "@/types/nutrition";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Scan() {
   const navigate = useNavigate();
@@ -98,6 +99,22 @@ export default function Scan() {
           <p>NutriScan AI - Your intelligent nutrition companion</p>
         </div>
       </footer>
+
+      {/* Floating NutriCoach Button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={() => navigate("/coach")}
+            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 z-50"
+            size="icon"
+          >
+            <MessageCircle className="h-6 w-6 text-white" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          <p>Chat with NutriCoach</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
