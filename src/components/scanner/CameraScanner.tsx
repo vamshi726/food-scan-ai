@@ -14,6 +14,7 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
   const [error, setError] = useState<string | null>(null);
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const hasSubmittedRef = useRef(false);
 
   const {
@@ -24,6 +25,7 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
       const text = result.getText();
       // Only set detected barcode if not already analyzing or confirming
       if (text && !isAnalyzing && !isConfirming && !hasSubmittedRef.current) {
+        console.log("Barcode detected:", text);
         setDetectedBarcode(text);
       }
     },
@@ -35,9 +37,14 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
         setError("Camera access denied. Please allow camera access in your browser settings.");
       } else if (error.name === "NotFoundError") {
         setError("No camera found on this device.");
+      } else {
+        // Don't set error for other issues - let the scanner retry
+        console.log("Scanner error (non-critical):", error.message);
       }
+      setIsInitializing(false);
     },
     paused: isAnalyzing,
+    timeBetweenDecodingAttempts: 200, // Scan more frequently
     constraints: {
       video: {
         facingMode: "environment",
@@ -47,13 +54,43 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
     },
   });
 
+  // Monitor video element to detect when camera is working
   useEffect(() => {
-    // Check camera permission on mount
-    navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then(() => setHasPermission(true))
-      .catch(() => setHasPermission(false));
-  }, []);
+    const videoElement = ref.current;
+    if (!videoElement) return;
+
+    const handleLoadedData = () => {
+      console.log("Camera stream loaded successfully");
+      setHasPermission(true);
+      setIsInitializing(false);
+    };
+
+    const handleError = () => {
+      console.log("Video element error");
+      setIsInitializing(false);
+    };
+
+    videoElement.addEventListener('loadeddata', handleLoadedData);
+    videoElement.addEventListener('error', handleError);
+
+    // Timeout fallback - if after 5 seconds we don't have video, show error
+    const timeout = setTimeout(() => {
+      if (isInitializing && !videoElement.srcObject) {
+        console.log("Camera initialization timeout");
+        setIsInitializing(false);
+        if (hasPermission === null) {
+          setHasPermission(false);
+          setError("Could not access camera. Please check permissions and try again.");
+        }
+      }
+    }, 5000);
+
+    return () => {
+      videoElement.removeEventListener('loadeddata', handleLoadedData);
+      videoElement.removeEventListener('error', handleError);
+      clearTimeout(timeout);
+    };
+  }, [ref, isInitializing, hasPermission]);
 
   // Handle barcode confirmation - auto-confirm after 1.5 seconds of stable detection
   useEffect(() => {
@@ -82,6 +119,28 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
     setIsConfirming(false);
     hasSubmittedRef.current = false;
   };
+
+  // Show loading state while initializing
+  if (isInitializing) {
+    return (
+      <div className="relative bg-muted rounded-xl p-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2"
+          onClick={onClose}
+        >
+          <X className="h-5 w-5" />
+        </Button>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Starting camera...</p>
+        </div>
+        {/* Hidden video to allow useZxing to initialize */}
+        <video ref={ref} className="hidden" />
+      </div>
+    );
+  }
 
   if (hasPermission === false || error) {
     return (
