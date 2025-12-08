@@ -1,9 +1,10 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Scan, Upload, X, Barcode as BarcodeIcon } from "lucide-react";
+import { Loader2, Scan, Upload, X, Barcode as BarcodeIcon, Camera } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { CameraScanner } from "./CameraScanner";
 
 interface BarcodeInputProps {
   onSubmit: (barcode: string) => void;
@@ -14,6 +15,7 @@ export const BarcodeInput = ({ onSubmit, isAnalyzing }: BarcodeInputProps) => {
   const [barcode, setBarcode] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -21,6 +23,15 @@ export const BarcodeInput = ({ onSubmit, isAnalyzing }: BarcodeInputProps) => {
     if (barcode.trim()) {
       onSubmit(barcode.trim());
     }
+  };
+
+  const handleCameraResult = (scannedBarcode: string) => {
+    setBarcode(scannedBarcode);
+    toast({
+      title: "Barcode Detected!",
+      description: `Found: ${scannedBarcode}`,
+    });
+    onSubmit(scannedBarcode);
   };
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,10 +67,9 @@ export const BarcodeInput = ({ onSubmit, isAnalyzing }: BarcodeInputProps) => {
 
   const handleImageSubmit = () => {
     if (imageData) {
-      // TODO: Add OCR logic to extract barcode from image
       toast({
         title: "Coming Soon",
-        description: "Barcode image scanning will be available soon. Please use manual entry for now.",
+        description: "Barcode image scanning will be available soon. Please use camera scan or manual entry.",
       });
     }
   };
@@ -69,13 +79,45 @@ export const BarcodeInput = ({ onSubmit, isAnalyzing }: BarcodeInputProps) => {
     setImageData(null);
   };
 
+  // Show camera scanner full screen
+  if (showCamera) {
+    return (
+      <div className="space-y-4">
+        <CameraScanner
+          onResult={handleCameraResult}
+          onClose={() => setShowCamera(false)}
+          isAnalyzing={isAnalyzing}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="text-center space-y-2 mb-6">
         <h3 className="text-lg font-semibold">Scan or Enter Barcode</h3>
         <p className="text-sm text-muted-foreground">
-          Upload a barcode image or enter the number manually
+          Use camera, upload image, or enter the number manually
         </p>
+      </div>
+
+      {/* Camera Scan Button - Primary Action */}
+      <Button
+        onClick={() => setShowCamera(true)}
+        disabled={isAnalyzing}
+        className="w-full h-14 text-base font-semibold gradient-hero hover:opacity-90 transition-opacity shadow-glow"
+      >
+        <Camera className="mr-2 h-6 w-6" />
+        Open Camera & Scan
+      </Button>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">or</span>
+        </div>
       </div>
 
       <Tabs defaultValue="enter" className="w-full">
@@ -106,7 +148,8 @@ export const BarcodeInput = ({ onSubmit, isAnalyzing }: BarcodeInputProps) => {
             <Button
               type="submit"
               disabled={!barcode.trim() || isAnalyzing}
-              className="w-full h-12 text-base font-semibold gradient-hero hover:opacity-90 transition-opacity shadow-glow"
+              variant="secondary"
+              className="w-full h-12 text-base font-semibold"
             >
               {isAnalyzing ? (
                 <>
@@ -167,7 +210,8 @@ export const BarcodeInput = ({ onSubmit, isAnalyzing }: BarcodeInputProps) => {
               <Button
                 onClick={handleImageSubmit}
                 disabled={isAnalyzing}
-                className="w-full h-12 text-base font-semibold gradient-hero hover:opacity-90 transition-opacity shadow-glow"
+                variant="secondary"
+                className="w-full h-12 text-base font-semibold"
               >
                 {isAnalyzing ? (
                   <>
