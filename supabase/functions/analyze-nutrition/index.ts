@@ -20,6 +20,121 @@ interface NutritionData {
   ingredients?: Array<{ text: string }>;
 }
 
+// Search the web for product information using AI
+async function searchProductOnline(barcode: string, apiKey: string): Promise<NutritionData | null> {
+  console.log(`Searching online for barcode: ${barcode}`);
+  
+  const searchPrompt = `Search for a product with barcode/UPC: ${barcode}
+  
+Find information about this product including:
+1. Product name and brand
+2. Nutrition facts per 100g (calories, protein, carbs, fat, sugar, sodium, fiber)
+3. Ingredients list
+
+Return ONLY a valid JSON object with this structure:
+{
+  "product_name": "Brand - Product Name",
+  "nutriments": {
+    "energy-kcal_100g": number or null,
+    "proteins_100g": number or null,
+    "carbohydrates_100g": number or null,
+    "fat_100g": number or null,
+    "sugars_100g": number or null,
+    "sodium_100g": number or null (in grams),
+    "fiber_100g": number or null
+  },
+  "ingredients_text": "comma separated ingredients or 'Unknown' if not found"
+}
+
+If you cannot find the product, return:
+{
+  "product_name": null,
+  "error": "Product not found"
+}`;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a product research assistant. You have knowledge of many consumer products, their barcodes, nutrition information, and ingredients. Provide accurate information when you know it, and clearly indicate when information is estimated or uncertain." 
+          },
+          { role: "user", content: searchPrompt }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI search failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.product_name && !parsed.error) {
+        console.log(`Found product via AI search: ${parsed.product_name}`);
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error("Error in AI product search:", error);
+  }
+  
+  return null;
+}
+
+// Try multiple barcode databases
+async function fetchFromBarcodeAPIs(barcode: string): Promise<NutritionData | null> {
+  // Try Open Food Facts first
+  try {
+    console.log(`Trying Open Food Facts for barcode: ${barcode}`);
+    const response = await fetch(
+      `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
+    );
+    const data = await response.json();
+    
+    if (data.status === 1 && data.product) {
+      console.log(`Found product in Open Food Facts: ${data.product.product_name}`);
+      return data.product;
+    }
+  } catch (error) {
+    console.error("Error fetching from Open Food Facts:", error);
+  }
+
+  // Try Open Food Facts with different regional endpoints
+  const regions = ['us', 'uk', 'de', 'fr', 'es'];
+  for (const region of regions) {
+    try {
+      console.log(`Trying Open Food Facts ${region} for barcode: ${barcode}`);
+      const response = await fetch(
+        `https://${region}.openfoodfacts.org/api/v0/product/${barcode}.json`
+      );
+      const data = await response.json();
+      
+      if (data.status === 1 && data.product) {
+        console.log(`Found product in Open Food Facts ${region}: ${data.product.product_name}`);
+        return data.product;
+      }
+    } catch (error) {
+      console.error(`Error fetching from Open Food Facts ${region}:`, error);
+    }
+  }
+
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -36,21 +151,25 @@ serve(async (req) => {
     let nutritionData: NutritionData | null = null;
     let productName = "Unknown Product";
     let barcodeValue = barcode;
+    let dataSource = "unknown";
 
-    // Fetch from external API if barcode provided
+    // Fetch from external APIs if barcode provided
     if (barcode) {
-      try {
-        const response = await fetch(
-          `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
-        );
-        const data = await response.json();
+      // Step 1: Try barcode databases
+      nutritionData = await fetchFromBarcodeAPIs(barcode);
+      
+      if (nutritionData) {
+        productName = nutritionData.product_name || "Unknown Product";
+        dataSource = "Open Food Facts";
+      } else {
+        // Step 2: No data in databases - search using AI
+        console.log("Product not found in databases, searching with AI...");
+        nutritionData = await searchProductOnline(barcode, LOVABLE_API_KEY);
         
-        if (data.status === 1 && data.product) {
-          nutritionData = data.product;
-          productName = data.product.product_name || "Unknown Product";
+        if (nutritionData) {
+          productName = nutritionData.product_name || "Unknown Product";
+          dataSource = "AI Search";
         }
-      } catch (error) {
-        console.error("Error fetching from Open Food Facts:", error);
       }
     }
 
@@ -106,6 +225,7 @@ Return ONLY a JSON object with this exact structure:
           if (jsonMatch) {
             nutritionData = JSON.parse(jsonMatch[0]);
             productName = nutritionData?.product_name || "Scanned Product";
+            dataSource = "Label OCR";
           }
         } catch (e) {
           console.error("Failed to parse vision response:", e);
@@ -115,7 +235,10 @@ Return ONLY a JSON object with this exact structure:
 
     if (!nutritionData) {
       return new Response(
-        JSON.stringify({ error: "Could not fetch or extract nutrition data" }),
+        JSON.stringify({ 
+          error: "Could not find product information. Please try uploading a photo of the nutrition label instead.",
+          suggestion: "upload_label"
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -150,6 +273,7 @@ IMPORTANT: Provide personalized warnings and recommendations based on the user's
 
 Product: ${productName}
 Barcode: ${barcodeValue || "N/A"}
+Data Source: ${dataSource}
 
 Nutrients (per 100g):
 - Calories: ${nutrients.calories} kcal
@@ -236,6 +360,7 @@ ${userPreferences ? "- CRITICAL: Lower score if ingredients conflict with user's
     const analysis = {
       productName,
       barcode: barcodeValue,
+      dataSource,
       healthScore: analysisResult.healthScore || 5,
       category: analysisResult.category || "moderate",
       nutrients,
