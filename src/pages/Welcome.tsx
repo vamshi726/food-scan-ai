@@ -7,15 +7,37 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-primary/5 flex items-center justify-center p-4">
+    <div className="relative min-h-screen bg-gradient-to-b from-background via-background/95 to-primary/5 flex items-center justify-center p-4">
+
+      {/* ====== TOP LEFT LOGO SECTION ====== */}
+      <div
+        className="absolute top-4 left-4 flex items-center gap-2 cursor-pointer z-50"
+        onClick={() => navigate("/")}
+      >
+        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-primary/10 border border-primary/30 shadow-sm">
+          <Scan className="w-6 h-6 text-primary" />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-lg font-bold leading-none">
+            Nutri<span className="text-primary">Scan</span> AI
+          </span>
+          <span className="text-xs text-muted-foreground -mt-[2px]">
+            Intelligent Food Analysis
+          </span>
+        </div>
+      </div>
+      {/* ===== END LOGO SECTION ===== */}
+
       <Card className="w-full max-w-md p-8 space-y-6 border-primary/20 shadow-xl">
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 border-2 border-primary/20">
             <Scan className="w-10 h-10 text-primary" />
           </div>
+
           <h1 className="text-4xl font-bold tracking-tight">
             Nutri<span className="text-primary">Scan</span> AI
           </h1>
+
           <p className="text-muted-foreground text-lg">
             Your AI-powered nutrition companion
           </p>
