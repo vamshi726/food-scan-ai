@@ -2,31 +2,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Scan, UserPlus, LogIn, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Logo } from "@/components/Logo";
 
 export default function Welcome() {
   const navigate = useNavigate();
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-background via-background/95 to-primary/5 flex items-center justify-center p-4">
-
-      {/* ====== TOP LEFT LOGO SECTION ====== */}
-      <div
-        className="absolute top-4 left-4 flex items-center gap-2 cursor-pointer z-50"
-        onClick={() => navigate("/")}
-      >
-        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-primary/10 border border-primary/30 shadow-sm">
-          <Scan className="w-6 h-6 text-primary" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-lg font-bold leading-none">
-            Nutri<span className="text-primary">Scan</span> AI
-          </span>
-          <span className="text-xs text-muted-foreground -mt-[2px]">
-            Intelligent Food Analysis
-          </span>
-        </div>
+      {/* Top Left Logo */}
+      <div className="absolute top-4 left-4 z-50">
+        <Logo size="md" />
       </div>
-      {/* ===== END LOGO SECTION ===== */}
 
       <Card className="w-full max-w-md p-8 space-y-6 border-primary/20 shadow-xl">
         <div className="text-center space-y-4">

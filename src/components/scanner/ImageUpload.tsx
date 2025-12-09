@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { Upload, Loader2, X, Image as ImageIcon, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LabelCameraScanner } from "./LabelCameraScanner";
 
 interface ImageUploadProps {
   onSubmit: (imageBase64: string) => void;
@@ -11,6 +12,7 @@ interface ImageUploadProps {
 export const ImageUpload = ({ onSubmit, isAnalyzing }: ImageUploadProps) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const { toast } = useToast();
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,13 +57,51 @@ export const ImageUpload = ({ onSubmit, isAnalyzing }: ImageUploadProps) => {
     setImageData(null);
   };
 
+  const handleCameraCapture = (imageBase64: string) => {
+    setShowCamera(false);
+    setPreview(imageBase64);
+    setImageData(imageBase64);
+    // Auto-submit when captured from camera
+    onSubmit(imageBase64);
+  };
+
+  // Show camera scanner
+  if (showCamera) {
+    return (
+      <LabelCameraScanner
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+        isAnalyzing={isAnalyzing}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="text-center space-y-2 mb-6">
-        <h3 className="text-lg font-semibold">Upload Nutrition Label</h3>
+        <h3 className="text-lg font-semibold">Scan Nutrition Label</h3>
         <p className="text-sm text-muted-foreground">
-          Take a clear photo of the nutrition facts and ingredients
+          Take a photo or upload an image of the nutrition facts
         </p>
+      </div>
+
+      {/* Camera Button - Primary Action */}
+      <Button
+        onClick={() => setShowCamera(true)}
+        disabled={isAnalyzing}
+        className="w-full h-14 text-base font-semibold gradient-hero hover:opacity-90 transition-opacity shadow-glow"
+      >
+        <Camera className="mr-2 h-6 w-6" />
+        Take Photo of Label
+      </Button>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">or upload</span>
+        </div>
       </div>
 
       {!preview ? (

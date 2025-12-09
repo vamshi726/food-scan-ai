@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { Logo } from "@/components/Logo";
 
 interface Message {
   role: "user" | "assistant";
@@ -223,24 +224,27 @@ export default function NutriCoach() {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/40 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/scan")}
-            className="shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-foreground">NutriCoach</h1>
-              <p className="text-xs text-muted-foreground">Your nutrition partner</p>
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/scan")}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="font-semibold text-foreground">NutriCoach</h1>
+                <p className="text-xs text-muted-foreground">Your nutrition partner</p>
+              </div>
             </div>
           </div>
+          <Logo size="sm" showTagline={false} />
         </div>
       </header>
 
