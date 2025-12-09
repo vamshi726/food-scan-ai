@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, User, Sparkles, MessageCircle } from "lucide-react";
+import { LogOut, User, MessageCircle } from "lucide-react";
 import { ScannerSection } from "@/components/scanner/ScannerSection";
 import { ResultsSection } from "@/components/results/ResultsSection";
 import type { NutritionAnalysis } from "@/types/nutrition";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Logo } from "@/components/Logo";
 
 export default function Scan() {
   const navigate = useNavigate();
@@ -38,22 +39,9 @@ export default function Scan() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-[100]">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 gradient-hero rounded-xl blur-lg opacity-50 animate-pulse-glow"></div>
-                <div className="relative bg-primary rounded-xl p-2">
-                  <Sparkles className="h-6 w-6 text-primary-foreground" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-clip-text text-transparent gradient-hero">
-                  NutriScan AI
-                </h1>
-                <p className="text-xs text-muted-foreground">Intelligent Food Analysis</p>
-              </div>
-            </div>
+            <Logo size="md" />
             
             <div className="flex items-center gap-2">
               {user ? (

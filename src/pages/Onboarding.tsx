@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, X } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import {
   Select,
   SelectContent,
@@ -77,8 +78,6 @@ export default function Onboarding() {
     intolerances: [] as string[],
     dietaryPreferences: [] as string[],
   });
-
-  const [currentInput, setCurrentInput] = useState("");
 
   const addItem = (category: keyof typeof healthData, item: string) => {
     if (!healthData[category].includes(item)) {
@@ -160,7 +159,12 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-primary/5 flex items-center justify-center p-4">
+    <div className="relative min-h-screen bg-gradient-to-b from-background via-background/95 to-primary/5 flex items-center justify-center p-4">
+      {/* Top Left Logo */}
+      <div className="absolute top-4 left-4 z-50">
+        <Logo size="md" />
+      </div>
+
       <Card className="w-full max-w-2xl p-8 space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">Complete Your Profile</h1>
