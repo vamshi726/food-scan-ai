@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Scan from "./pages/Scan";
 import NutriCoach from "./pages/NutriCoach";
+import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/coach" element={<NutriCoach />} />
+          <Route path="/home" element={<Home />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

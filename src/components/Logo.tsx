@@ -35,13 +35,13 @@ export const Logo = ({ size = "md", showTagline = true, className = "" }: LogoPr
 
   return (
     <div
-      className={`flex items-center gap-2 cursor-pointer select-none ${className}`}
-      onClick={() => navigate("/")}
+      className={`flex items-center gap-2 cursor-pointer select-none relative z-50 ${className}`}
+      onClick={() => navigate("/home")}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
-          navigate("/");
+          navigate("/home");
         }
       }}
     >

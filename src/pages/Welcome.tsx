@@ -50,7 +50,7 @@ export default function Welcome() {
           </Button>
 
           <Button
-            onClick={() => navigate("/scan")}
+            onClick={() => navigate("/home")}
             variant="ghost"
             className="w-full h-12 text-base gap-2"
             size="lg"
