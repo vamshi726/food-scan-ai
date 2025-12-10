@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Camera, Loader2, Check, RotateCcw, Image as ImageIcon } from "lucide-react";
 
@@ -19,6 +19,7 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
 
   const initCamera = useCallback(async () => {
     try {
+      setIsInitializing(true);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
@@ -32,7 +33,7 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play();
+          videoRef.current?.play().catch(console.error);
           setHasPermission(true);
           setIsInitializing(false);
         };
@@ -54,14 +55,15 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
   }, []);
 
   // Initialize camera on mount
-  useState(() => {
+  useEffect(() => {
     initCamera();
+    
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  });
+  }, [initCamera]);
 
   const handleCapture = () => {
     if (!videoRef.current || !canvasRef.current) return;

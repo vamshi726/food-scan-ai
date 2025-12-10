@@ -155,7 +155,7 @@ export default function Onboarding() {
       title: "Profile complete!",
       description: "You're all set to scan products",
     });
-    navigate("/scan");
+    navigate("/home");
   };
 
   return (

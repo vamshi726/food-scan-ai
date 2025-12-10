@@ -41,9 +41,9 @@ export default function Login() {
     if (data.user) {
       toast({
         title: "Welcome back!",
-        description: "Redirecting to scanner...",
+        description: "Redirecting to home...",
       });
-      navigate("/scan");
+      navigate("/home");
     }
   };
 
