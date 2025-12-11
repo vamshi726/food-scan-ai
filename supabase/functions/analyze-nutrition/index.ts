@@ -293,6 +293,7 @@ Agent 1 - Ingredient Parser: Parse and categorize all ingredients
 Agent 2 - Risk Detector: Identify harmful additives, preservatives, excessive sugar/sodium
 Agent 3 - Health Score Calculator: Calculate a score from 1-10 based on WHO guidelines${userPreferences ? " AND user's health profile" : ""}
 Agent 4 - Recommendation Engine: Suggest healthier alternatives or improvements${userPreferences ? " tailored to user's needs" : ""}
+Agent 5 - Alternatives Finder: Suggest 3 healthier alternative products in the same category
 
 Return ONLY valid JSON with this structure:
 {
@@ -306,7 +307,15 @@ Return ONLY valid JSON with this structure:
     }
   ],
   "recommendations": ["rec1", "rec2", "rec3"],
-  "aiExplanation": "2-3 sentence summary of overall assessment${userPreferences ? " personalized to user's health profile" : ""}"
+  "aiExplanation": "2-3 sentence summary of overall assessment${userPreferences ? " personalized to user's health profile" : ""}",
+  "healthierAlternatives": [
+    {
+      "name": "Product Name",
+      "brand": "Brand Name",
+      "reason": "Why this is healthier (1 sentence)",
+      "estimatedScore": number (1-10)
+    }
+  ]
 }
 
 Guidelines:
@@ -368,6 +377,7 @@ ${userPreferences ? "- CRITICAL: Lower score if ingredients conflict with user's
       riskIngredients: analysisResult.riskIngredients || [],
       recommendations: analysisResult.recommendations || [],
       aiExplanation: analysisResult.aiExplanation || "Analysis completed successfully.",
+      healthierAlternatives: analysisResult.healthierAlternatives || [],
     };
 
     return new Response(
