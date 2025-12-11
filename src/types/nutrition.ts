@@ -1,3 +1,10 @@
+export interface HealthierAlternative {
+  name: string;
+  brand: string;
+  reason: string;
+  estimatedScore: number;
+}
+
 export interface NutritionAnalysis {
   productName: string;
   barcode?: string;
@@ -20,4 +27,5 @@ export interface NutritionAnalysis {
   }>;
   recommendations: string[];
   aiExplanation: string;
+  healthierAlternatives: HealthierAlternative[];
 }

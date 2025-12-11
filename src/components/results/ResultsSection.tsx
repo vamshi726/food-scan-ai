@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { NutritionAnalysis } from "@/types/nutrition";
 import { HealthScoreCard } from "./HealthScoreCard";
 import { NutrientsCard } from "./NutrientsCard";
 import { IngredientsCard } from "./IngredientsCard";
 import { RecommendationsCard } from "./RecommendationsCard";
+import { AlternativesCard } from "./AlternativesCard";
 
 interface ResultsSectionProps {
   analysis: NutritionAnalysis;
@@ -53,6 +54,12 @@ export const ResultsSection = ({ analysis, onScanAnother }: ResultsSectionProps)
 
       {/* Recommendations */}
       <RecommendationsCard recommendations={analysis.recommendations} />
+
+      {/* Healthier Alternatives */}
+      <AlternativesCard 
+        alternatives={analysis.healthierAlternatives} 
+        currentScore={analysis.healthScore}
+      />
     </div>
   );
 };
