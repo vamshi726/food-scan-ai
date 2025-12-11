@@ -14,7 +14,7 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
   const [error, setError] = useState<string | null>(null);
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isReady, setIsReady] = useState(false);
   const hasSubmittedRef = useRef(false);
 
   const {
@@ -23,7 +23,6 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
   } = useZxing({
     onDecodeResult(result) {
       const text = result.getText();
-      // Only set detected barcode if not already analyzing or confirming
       if (text && !isAnalyzing && !isConfirming && !hasSubmittedRef.current) {
         console.log("Barcode detected:", text);
         setDetectedBarcode(text);
@@ -37,14 +36,11 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
         setError("Camera access denied. Please allow camera access in your browser settings.");
       } else if (error.name === "NotFoundError") {
         setError("No camera found on this device.");
-      } else {
-        // Don't set error for other issues - let the scanner retry
-        console.log("Scanner error (non-critical):", error.message);
+        setHasPermission(false);
       }
-      setIsInitializing(false);
     },
     paused: isAnalyzing,
-    timeBetweenDecodingAttempts: 200, // Scan more frequently
+    timeBetweenDecodingAttempts: 150,
     constraints: {
       video: {
         facingMode: "environment",
@@ -54,45 +50,41 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
     },
   });
 
-  // Monitor video element to detect when camera is working
+  // Fast camera ready detection
   useEffect(() => {
     const videoElement = ref.current;
     if (!videoElement) return;
 
-    const handleLoadedData = () => {
-      console.log("Camera stream loaded successfully");
-      setHasPermission(true);
-      setIsInitializing(false);
-    };
-
-    const handleError = () => {
-      console.log("Video element error");
-      setIsInitializing(false);
-    };
-
-    videoElement.addEventListener('loadeddata', handleLoadedData);
-    videoElement.addEventListener('error', handleError);
-
-    // Timeout fallback - if after 5 seconds we don't have video, show error
-    const timeout = setTimeout(() => {
-      if (isInitializing && !videoElement.srcObject) {
-        console.log("Camera initialization timeout");
-        setIsInitializing(false);
-        if (hasPermission === null) {
-          setHasPermission(false);
-          setError("Could not access camera. Please check permissions and try again.");
-        }
+    const checkReady = () => {
+      if (videoElement.readyState >= 2) {
+        setHasPermission(true);
+        setIsReady(true);
       }
-    }, 5000);
+    };
+
+    // Check immediately
+    checkReady();
+
+    // Also listen for events
+    videoElement.addEventListener('loadeddata', checkReady);
+    videoElement.addEventListener('canplay', checkReady);
+
+    // Quick timeout - 3 seconds max
+    const timeout = setTimeout(() => {
+      if (!isReady && hasPermission === null) {
+        setHasPermission(false);
+        setError("Could not access camera. Please check permissions.");
+      }
+    }, 3000);
 
     return () => {
-      videoElement.removeEventListener('loadeddata', handleLoadedData);
-      videoElement.removeEventListener('error', handleError);
+      videoElement.removeEventListener('loadeddata', checkReady);
+      videoElement.removeEventListener('canplay', checkReady);
       clearTimeout(timeout);
     };
-  }, [ref, isInitializing, hasPermission]);
+  }, [ref, isReady, hasPermission]);
 
-  // Handle barcode confirmation - auto-confirm after 1.5 seconds of stable detection
+  // Handle barcode confirmation
   useEffect(() => {
     if (detectedBarcode && !isAnalyzing && !hasSubmittedRef.current) {
       setIsConfirming(true);
@@ -120,28 +112,7 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
     hasSubmittedRef.current = false;
   };
 
-  // Show loading state while initializing
-  if (isInitializing) {
-    return (
-      <div className="relative bg-muted rounded-xl p-8">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2"
-          onClick={onClose}
-        >
-          <X className="h-5 w-5" />
-        </Button>
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Starting camera...</p>
-        </div>
-        {/* Hidden video to allow useZxing to initialize */}
-        <video ref={ref} className="hidden" />
-      </div>
-    );
-  }
-
+  // Error state
   if (hasPermission === false || error) {
     return (
       <div className="relative bg-muted rounded-xl p-8 text-center">
@@ -199,37 +170,49 @@ export const CameraScanner = ({ onResult, onClose, isAnalyzing }: CameraScannerP
         </Button>
       )}
 
-      {/* Camera view */}
+      {/* Camera view - always visible for fast init */}
       <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3]">
         <video
           ref={ref}
           className="w-full h-full object-cover"
+          playsInline
+          muted
+          autoPlay
         />
 
-        {/* Scanning overlay */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="relative w-64 h-32">
-            {/* Corner brackets - green when detected */}
-            <div className={`absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
-            <div className={`absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
-            <div className={`absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
-            <div className={`absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
-
-            {/* Scanning line animation - only show when not detected */}
-            {!isAnalyzing && !detectedBarcode && (
-              <div className="absolute inset-x-2 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse" />
-            )}
-
-            {/* Detected checkmark */}
-            {detectedBarcode && !isAnalyzing && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="bg-green-500 rounded-full p-2 animate-in zoom-in duration-200">
-                  <Check className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            )}
+        {/* Loading overlay */}
+        {!isReady && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-2" />
+              <p className="text-sm text-white">Starting camera...</p>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Scanning overlay */}
+        {isReady && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="relative w-64 h-32">
+              <div className={`absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
+              <div className={`absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
+              <div className={`absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
+              <div className={`absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg transition-colors ${detectedBarcode ? 'border-green-500' : 'border-primary'}`} />
+
+              {!isAnalyzing && !detectedBarcode && (
+                <div className="absolute inset-x-2 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse" />
+              )}
+
+              {detectedBarcode && !isAnalyzing && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-green-500 rounded-full p-2 animate-in zoom-in duration-200">
+                    <Check className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Detected barcode info */}
         {detectedBarcode && !isAnalyzing && (
