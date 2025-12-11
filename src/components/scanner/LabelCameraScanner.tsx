@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Camera, Loader2, Check, RotateCcw, Image as ImageIcon } from "lucide-react";
+import { X, Camera, Loader2, Check, RotateCcw, Image as ImageIcon, Flashlight, FlashlightOff } from "lucide-react";
 
 interface LabelCameraScannerProps {
   onCapture: (imageBase64: string) => void;
@@ -11,15 +11,17 @@ interface LabelCameraScannerProps {
 export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCameraScannerProps) => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isReady, setIsReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchAvailable, setTorchAvailable] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
 
   const initCamera = useCallback(async () => {
     try {
-      setIsInitializing(true);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
@@ -29,20 +31,26 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
       });
 
       streamRef.current = stream;
+      const videoTrack = stream.getVideoTracks()[0];
+      trackRef.current = videoTrack;
+
+      // Check torch availability
+      const capabilities = videoTrack.getCapabilities?.();
+      if (capabilities && 'torch' in capabilities) {
+        setTorchAvailable(true);
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(console.error);
-          setHasPermission(true);
-          setIsInitializing(false);
-        };
+        // Start playing immediately
+        videoRef.current.play().catch(console.error);
       }
+
+      setHasPermission(true);
     } catch (err) {
       console.error("Camera error:", err);
       const error = err as Error;
       setHasPermission(false);
-      setIsInitializing(false);
       
       if (error.name === "NotAllowedError") {
         setError("Camera access denied. Please allow camera access in your browser settings.");
@@ -64,6 +72,41 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
       }
     };
   }, [initCamera]);
+
+  // Monitor video ready state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleReady = () => {
+      if (video.readyState >= 2) {
+        setIsReady(true);
+      }
+    };
+
+    handleReady(); // Check immediately
+    video.addEventListener('loadeddata', handleReady);
+    video.addEventListener('canplay', handleReady);
+
+    return () => {
+      video.removeEventListener('loadeddata', handleReady);
+      video.removeEventListener('canplay', handleReady);
+    };
+  }, [hasPermission]);
+
+  const toggleTorch = async () => {
+    if (!trackRef.current) return;
+
+    try {
+      await trackRef.current.applyConstraints({
+        // @ts-ignore - torch is a valid constraint but not in types
+        advanced: [{ torch: !torchOn }]
+      });
+      setTorchOn(!torchOn);
+    } catch (err) {
+      console.error("Torch error:", err);
+    }
+  };
 
   const handleCapture = () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -88,7 +131,6 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
 
   const handleConfirm = () => {
     if (capturedImage) {
-      // Stop camera stream before submitting
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -103,30 +145,9 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
     onClose();
   };
 
-  // Hidden canvas for capture
   const hiddenCanvas = <canvas ref={canvasRef} className="hidden" />;
 
-  if (isInitializing) {
-    return (
-      <div className="relative bg-muted rounded-xl p-8">
-        {hiddenCanvas}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2 z-10"
-          onClick={handleClose}
-        >
-          <X className="h-5 w-5" />
-        </Button>
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Starting camera...</p>
-        </div>
-        <video ref={videoRef} className="hidden" playsInline muted />
-      </div>
-    );
-  }
-
+  // Error state
   if (hasPermission === false || error) {
     return (
       <div className="relative bg-muted rounded-xl p-8 text-center">
@@ -226,7 +247,23 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
         <X className="h-5 w-5" />
       </Button>
 
-      {/* Camera view */}
+      {/* Torch button */}
+      {torchAvailable && (
+        <Button
+          variant="secondary"
+          size="icon"
+          className="absolute top-3 left-3 z-20"
+          onClick={toggleTorch}
+        >
+          {torchOn ? (
+            <FlashlightOff className="h-5 w-5" />
+          ) : (
+            <Flashlight className="h-5 w-5" />
+          )}
+        </Button>
+      )}
+
+      {/* Camera view - always visible */}
       <div className="relative rounded-xl overflow-hidden bg-black aspect-[3/4]">
         <video
           ref={videoRef}
@@ -236,22 +273,32 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
           autoPlay
         />
 
-        {/* Frame overlay for nutrition label */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="relative w-[85%] h-[70%] border-2 border-primary/50 rounded-lg">
-            {/* Corner brackets */}
-            <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
-            <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
-            <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
-            
-            {/* Label icon */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2">
-              <ImageIcon className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium">Position label here</span>
+        {/* Loading overlay */}
+        {!isReady && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-2" />
+              <p className="text-sm text-white">Starting camera...</p>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Frame overlay for nutrition label */}
+        {isReady && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="relative w-[85%] h-[70%] border-2 border-primary/50 rounded-lg">
+              <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
+              <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
+              <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
+              
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium">Position label here</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Capture button */}
@@ -260,6 +307,7 @@ export const LabelCameraScanner = ({ onCapture, onClose, isAnalyzing }: LabelCam
           size="lg"
           className="h-16 w-16 rounded-full gradient-hero shadow-lg"
           onClick={handleCapture}
+          disabled={!isReady}
         >
           <Camera className="h-8 w-8" />
         </Button>
