@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nutriscan-config
+  namespace: nutriscan
+  labels:
+    app: nutriscan
+data:
+  VITE_SUPABASE_URL: "https://evuzabykhxpimvulnrve.supabase.co"
+  VITE_SUPABASE_PROJECT_ID: "evuzabykhxpimvulnrve"
