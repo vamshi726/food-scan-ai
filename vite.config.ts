@@ -5,9 +5,14 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "./", // Fix SPA reload 404
   server: {
     host: "::",
     port: 8080,
+  },
+  build: {
+    outDir: "dist", // Build output folder for Azure
+    sourcemap: mode === "development", // Optional: generate source maps in dev
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
