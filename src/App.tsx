@@ -12,6 +12,7 @@ import Scan from "./pages/Scan";
 import NutriCoach from "./pages/NutriCoach";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
+import Footer from "./components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+       <Footer />
     </TooltipProvider>
   </QueryClientProvider>
 );
